@@ -75,7 +75,7 @@ def main():
 
     if device == 'cuda':
         model = model.to(device)
-        model = torch.nn.DataParallel(model)
+        # model = torch.nn.DataParallel(model)
         cudnn.benchmark = True
 
     # print("created model with configuration: %s", model_config)
@@ -316,13 +316,13 @@ def main():
 
         test(model, device, testloader, num_classes, mode='both', sigma=args.sigma,
              beta=args.beta, file_path=(None if save_path is None else os.path.join(save_path,
-                                                                                    'certify_radius.txt')))
+                                                                                    'test_accuracy.txt')))
 
         certify(model, device, testset, num_classes,
                 mode='hard', start_img=500, num_img=500, skip=1,
                 sigma=args.sigma, beta=args.beta,
                 matfile=(None if save_path is None else os.path.join(save_path,
-                                                                     'testaccuracy.txt')))
+                                                                     'certify_radius.txt')))
 
 
 def set_seed(seed):

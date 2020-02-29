@@ -77,7 +77,7 @@ class Test(object):
                 batch = x.repeat((1, this_batch_size, 1, 1))
                 noise = torch.randn_like(batch, device=self.device) * self.sigma
 
-                noisy_inputs = batch_size + noise
+                noisy_inputs = batch + noise
                 noisy_inputs = noisy_inputs.view([inputs_size * this_batch_size] + list(x[0].size()))
 
                 predictions = self.base_classifier(noisy_inputs).view(inputs_size, this_batch_size, self.num_classes)
@@ -132,7 +132,7 @@ class Test(object):
 
 
 def test(model, device, dataloader, num_classes, mode='hard', sigma=0.25,
-         N=100, alpha=0.0005, batch=100, beta=1.0, file_path=None):
+         N=1, alpha=0.0005, batch=1, beta=1.0, file_path=None):
     print('===accuracy on test set(N={}, sigma={}, mode={})==='.format(N, sigma, mode))
 
     correct = 0
@@ -163,14 +163,17 @@ def test(model, device, dataloader, num_classes, mode='hard', sigma=0.25,
     if mode == 'both':
         accuracy_hard, accuracy_soft = correct_hard / num, correct_soft / num
 
-        with open(file_path, 'b') as f:
+        with open(file_path, 'a') as f:
             f.writelines('accuracy_hard: {} and accuracy_soft: {}'.format(accuracy_hard, accuracy_soft))
+
+        print('accuracy_hard: {} and accuracy_soft: {}'.format(accuracy_hard, accuracy_soft))
 
         return accuracy_hard, accuracy_soft
     else:
         accuracy = correct / num
 
-        with open(file_path, 'b') as f:
+        with open(file_path, 'a') as f:
             f.writelines('accuracy: {}'.format(accuracy))
+        print('accuracy: {}'.format(accuracy))
 
         return accuracy
