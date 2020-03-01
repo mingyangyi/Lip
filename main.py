@@ -15,7 +15,7 @@ from utils import *
 from macer import macer_train
 from rs.certify import certify
 from rs.test import test
-from model import resnet110
+from model import *
 
 import os
 import argparse
@@ -27,7 +27,7 @@ parser.add_argument('--model', '-a', metavar='MODEL', default='resnet',
 parser.add_argument('--depth', default=110, type=int,
                     help='depth for resnet')
 parser.add_argument('--save_path', type=str, default='./results')
-parser.add_argument('--data_dir', type=str, default='//gcr_share/data/imagenet/2012')
+parser.add_argument('--data_dir', type=str, default='/blob_data/data/imagenet')
 parser.add_argument('--task', default='train',
                     type=str, help='Task: train or test')
 ##########################################################################
@@ -205,7 +205,7 @@ def main():
         testset = InMemoryZipDataset(valid_dir, transform_test, 32)
 
         print('Found {} in training data'.format(len(trainset)))
-        print('Found {} in validation data'.format(len(validset)))
+        print('Found {} in validation data'.format(len(testset)))
 
         trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=True, pin_memory=True, num_workers=16)
         testloader = torch.utils.data.DataLoader(testset, batch_size=1, shuffle=False, pin_memory=True, num_workers=1)
@@ -222,7 +222,10 @@ def main():
             start_epoch = checkpoint['epoch'] + 1
             scheduler.step(start_epoch)
 
-    num_classes = 10
+    if args.dataset == 'imagenet':
+        num_classes = 1000
+    else:
+        num_classes = 10
     train_vector = []
 
     if args.task == 'train':
@@ -232,7 +235,21 @@ def main():
             print('create an optimizer with learning rate as:', lr)
             model.train()
             start_time = time.time()
-            c_loss, r_loss, acc = macer_train(args.training_method, args.sigma, args.lam, args.gauss_num, args.beta,
+            if args.dataset != 'imagenet':
+                if args.sigma == 1.0:
+                    if epoch >= 200:
+                        lam = args.lam
+                    else:
+                        lam = 0
+                else:
+                    lam = args.lam
+            else:
+                if epoch > 90:
+                    lam = 0
+                else:
+                    lam = args.lam
+
+            c_loss, r_loss, acc = macer_train(args.training_method, args.sigma, lam, args.gauss_num, args.beta,
                                               args.gamma, num_classes, model, trainloader,
                                               optimizer, device)
 
@@ -261,7 +278,7 @@ def main():
                     print('Elapsed time: {}'.format(t2 - t1))
 
             else:
-                if epoch % 50 == 0 and epoch >= 100:
+                if epoch % 30 == 0 and epoch >= 90:
                     # Certify test
                     print('===test(epoch={})==='.format(epoch))
                     t1 = time.time()

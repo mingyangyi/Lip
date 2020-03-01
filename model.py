@@ -21,6 +21,15 @@ def conv3x3(in_planes, out_planes, stride=1):
   return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=False)
 
 
+def init_model(model):
+  for m in model.modules():
+    if isinstance(m, nn.Conv2d):
+        n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+        m.weight.data.normal_(0, math.sqrt(2. / n))
+    elif isinstance(m, nn.BatchNorm2d):
+        m.weight.data.fill_(1)
+        m.bias.data.zero_()
+
 class BasicBlock(nn.Module):
   expansion = 1
 
