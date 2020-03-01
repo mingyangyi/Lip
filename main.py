@@ -71,11 +71,14 @@ def main():
         os.makedirs(save_path)
 
     logging.info("creating model %s", args.model)
-    model = resnet110()
+    if args.dataset == 'imagenet':
+        model = resnet50()
+    else:
+        model = resnet110()
 
     if device == 'cuda':
         model = model.to(device)
-        # model = torch.nn.DataParallel(model)
+        model = torch.nn.DataParallel(model)
         cudnn.benchmark = True
 
     # print("created model with configuration: %s", model_config)
@@ -205,7 +208,7 @@ def main():
         print('Found {} in validation data'.format(len(validset)))
 
         trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=True, pin_memory=True, num_workers=16)
-        testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, pin_memory=True, num_workers=4)
+        testloader = torch.utils.data.DataLoader(testset, batch_size=1, shuffle=False, pin_memory=True, num_workers=1)
 
     else:
         raise ValueError('There is no such dataset')

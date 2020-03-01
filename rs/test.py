@@ -57,8 +57,8 @@ class Test(object):
 
             pA, pB= self._lower_confidence_bound(scoreA, scoreB, n, alpha, self.mode)
 
-            output_hard = predict[:, 0]
-            output_hard[torch.tensor(pA) < torch.tensor(pB)] = Test.ABSTAIN
+            output = predict[:, 0]
+            output[torch.tensor(pA) < torch.tensor(pB)] = Test.ABSTAIN
 
             return output.cpu().numpy()
 
@@ -132,7 +132,7 @@ class Test(object):
 
 
 def test(model, device, dataloader, num_classes, mode='hard', sigma=0.25,
-         N=1, alpha=0.0005, batch=1, beta=1.0, file_path=None):
+         N=1000, alpha=0.0005, batch=100, beta=1.0, file_path=None):
     print('===accuracy on test set(N={}, sigma={}, mode={})==='.format(N, sigma, mode))
 
     correct = 0
