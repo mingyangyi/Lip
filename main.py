@@ -16,6 +16,7 @@ from macer import macer_train
 from rs.certify import certify
 from rs.test import test
 from model import *
+import copy
 
 import os
 import argparse
@@ -58,6 +59,7 @@ parser.add_argument('--lam', default=12.0, type=float,
                     metavar='W', help='initial sigma for each data')
 parser.add_argument('--gamma', default=8.0, type=float, help='Hinge factor')
 parser.add_argument('--beta', default=16.0, type=float, help='Inverse temperature of softmax (also used in test)')
+parser.add_argument('--label_smoothing', default='True', type=str, help='Training with label smoothing or not')
 
 
 def main():
@@ -78,7 +80,7 @@ def main():
 
     if device == 'cuda':
         model = model.to(device)
-        model = torch.nn.DataParallel(model)
+        # model = torch.nn.DataParallel(model)
         cudnn.benchmark = True
 
     # print("created model with configuration: %s", model_config)
@@ -251,7 +253,7 @@ def main():
 
             c_loss, r_loss, acc = macer_train(args.training_method, args.sigma, lam, args.gauss_num, args.beta,
                                               args.gamma, num_classes, model, trainloader,
-                                              optimizer, device)
+                                              optimizer, device, args.label_smoothing)
 
             print('Training time for each epoch is %g, optimizer is %s, model is %s' % (
                 time.time() - start_time, args.optimizer, args.model + str(args.depth)))

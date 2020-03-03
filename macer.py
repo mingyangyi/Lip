@@ -5,7 +5,7 @@ import torch.nn as nn
 
 
 def macer_train(method, sigma, lbd, gauss_num, beta, gamma, num_classes, model, trainloader,
-                optimizer, device):
+                optimizer, device, label_smooth='True'):
     m = Normal(torch.tensor([0.0]).to(device),
                torch.tensor([1.0]).to(device))
 
@@ -30,13 +30,23 @@ def macer_train(method, sigma, lbd, gauss_num, beta, gamma, num_classes, model, 
 
             outputs = model(noisy_inputs)
 
-            noise = noise.reshape([batch_size, gauss_num] + list(inputs[0].size()))
+            # noise = noise.reshape([batch_size, gauss_num] + list(inputs[0].size()))
             outputs = outputs.reshape((batch_size, gauss_num, num_classes))
+            if label_smooth == 'True':
+                labels = label_smoothing(inputs, targets, noise, gauss_num, num_classes, device)
 
             # Classification loss
-            outputs_softmax = F.softmax(outputs, dim=2).mean(1)
-            outputs_logsoftmax = torch.log(outputs_softmax + 1e-10)  # avoid nan
-            classification_loss = F.nll_loss(outputs_logsoftmax, targets, reduction='sum')
+            if label_smooth == 'True':
+                criterion = nn.KLDivLoss(size_average=False)
+                outputs_logsoftmax = F.log_softmax(outputs, dim=2).mean(1)  # log_softmax
+                smoothing_label = F.softmax(labels, dim=2).mean(1)
+                classification_loss = criterion.forward(outputs_logsoftmax, smoothing_label)
+
+            else:
+                outputs_softmax = F.softmax(outputs, dim=2).mean(1)
+                outputs_logsoftmax = torch.log(outputs_softmax + 1e-10)  # avoid nan
+                classification_loss = F.nll_loss(outputs_logsoftmax, targets, reduction='sum')
+
             cl_total += classification_loss.item()
             # print(classification_loss)
 
@@ -57,25 +67,25 @@ def macer_train(method, sigma, lbd, gauss_num, beta, gamma, num_classes, model, 
             robustness_loss_correct = m.icdf(out0_correct) - m.icdf(out1_correct)
 
             indice_1 = robustness_loss_correct <= gamma
-            indice_2 = ~(robustness_loss_correct <= gamma)
+            # indice_2 = ~(robustness_loss_correct <= gamma)
 
             radius_loss = (robustness_loss_correct[indice_1] * sigma).sum() / 2
 
             #maxmizing gradient norm for robust data
-            gradient_loss = 0
-            if len(noise[indices_correct][indice_2]) > 0:
-                sub_noise = noise[indices_correct][indice_2]
-                sub_outputs = F.softmax(outputs, dim=2)[indices_correct][indice_2]
+            # gradient_loss = 0
+            # if len(noise[indices_correct][indice_2]) > 0:
+            #     sub_noise = noise[indices_correct][indice_2]
+            #     sub_outputs = F.softmax(outputs, dim=2)[indices_correct][indice_2]
+            #
+            #     sub_noise = sub_noise.view(sub_noise.size()[0] * gauss_num, -1)
+            #     sub_outputs = sub_outputs.view(sub_outputs.size()[0] * gauss_num, -1)
+            #
+            #     for i in range(num_classes):
+            #         gradient_loss_tmp = sub_outputs[:, i] * sub_noise[:, i] / (gauss_num * sigma ** 2)
+            #         gradient_loss_tmp = (gradient_loss_tmp ** 2).sum()
+            #         gradient_loss += gradient_loss_tmp
 
-                sub_noise = sub_noise.view(sub_noise.size()[0] * gauss_num, -1)
-                sub_outputs = sub_outputs.view(sub_outputs.size()[0] * gauss_num, -1)
-
-                for i in range(num_classes):
-                    gradient_loss_tmp = sub_outputs[:, i] * sub_noise[:, i] / (gauss_num * sigma ** 2)
-                    gradient_loss_tmp = (gradient_loss_tmp ** 2).sum()
-                    gradient_loss += gradient_loss_tmp
-
-            robustness_loss = radius_loss + gradient_loss
+            robustness_loss = radius_loss #+ gradient_loss
             rl_total += lbd * robustness_loss.item()
 
             # Final objective function
@@ -85,6 +95,7 @@ def macer_train(method, sigma, lbd, gauss_num, beta, gamma, num_classes, model, 
 
             optimizer.step()
             optimizer.zero_grad()
+            print('check')
 
         cl_total /= data_size
         rl_total /= data_size
@@ -111,3 +122,21 @@ def macer_train(method, sigma, lbd, gauss_num, beta, gamma, num_classes, model, 
         acc = 100 * correct / data_size
 
         return cl_total, rl_total, acc
+
+
+def label_smoothing(inputs, targets, noise, gauss_num, num_classes, device):
+
+    inputs, noise = inputs.view(inputs.size()[0], -1), noise.view(noise.size()[0], -1)
+    inputs_norm_squrae, noise_norm_square = inputs.norm(2, 1).unsqueeze(1) ** 2, noise.norm(2, 1).unsqueeze(1) ** 2
+    ratio = inputs_norm_squrae / (inputs_norm_squrae + noise_norm_square)
+
+    tmp_label = torch.zeros((targets.size()[0], num_classes)).to(device)
+    for i, j in zip(targets, tmp_label):
+        j[i] = 1.0
+    tmp_label = tmp_label.repeat(1, gauss_num)
+    tmp_label = tmp_label.view(gauss_num * tmp_label.size()[0], -1)
+    tmp_label = ratio * tmp_label + (1 - ratio) * torch.ones_like(tmp_label)
+
+    label = tmp_label.view(int(inputs.size()[0] / gauss_num), gauss_num, num_classes)
+
+    return label
