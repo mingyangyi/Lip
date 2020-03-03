@@ -95,7 +95,6 @@ def macer_train(method, sigma, lbd, gauss_num, beta, gamma, num_classes, model, 
 
             optimizer.step()
             optimizer.zero_grad()
-            print('check')
 
         cl_total /= data_size
         rl_total /= data_size
@@ -125,7 +124,7 @@ def macer_train(method, sigma, lbd, gauss_num, beta, gamma, num_classes, model, 
 
 
 def label_smoothing(inputs, targets, noise, gauss_num, num_classes, device):
-
+    #using the ratio of norm with respect to noise to smoothing label
     inputs, noise = inputs.view(inputs.size()[0], -1), noise.view(noise.size()[0], -1)
     inputs_norm_squrae, noise_norm_square = inputs.norm(2, 1).unsqueeze(1) ** 2, noise.norm(2, 1).unsqueeze(1) ** 2
     ratio = inputs_norm_squrae / (inputs_norm_squrae + noise_norm_square)
@@ -135,8 +134,10 @@ def label_smoothing(inputs, targets, noise, gauss_num, num_classes, device):
         j[i] = 1.0
     tmp_label = tmp_label.repeat(1, gauss_num)
     tmp_label = tmp_label.view(gauss_num * tmp_label.size()[0], -1)
+
+    #smoothed label is calculated by original hard label plus identical vector
     tmp_label = ratio * tmp_label + (1 - ratio) * torch.ones_like(tmp_label)
 
-    label = tmp_label.view(int(inputs.size()[0] / gauss_num), gauss_num, num_classes)
+    label = 10 * tmp_label.view(int(inputs.size()[0] / gauss_num), gauss_num, num_classes)
 
     return label
