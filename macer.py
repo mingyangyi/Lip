@@ -32,14 +32,13 @@ def macer_train(method, sigma, lbd, gauss_num, beta, gamma, num_classes, model, 
 
             # noise = noise.reshape([batch_size, gauss_num] + list(inputs[0].size()))
             outputs = outputs.reshape((batch_size, gauss_num, num_classes))
-            if label_smooth == 'True':
-                labels = label_smoothing(inputs, targets, noise, gauss_num, num_classes, device)
 
             # Classification loss
             if label_smooth == 'True':
+                labels = label_smoothing(inputs, targets, noise, gauss_num, num_classes, device)
                 criterion = nn.KLDivLoss(size_average=False)
                 outputs_logsoftmax = F.log_softmax(outputs, dim=2).mean(1)  # log_softmax
-                smoothing_label = F.softmax(labels, dim=2).mean(1)
+                smoothing_label = labels.mean(1)
                 classification_loss = criterion.forward(outputs_logsoftmax, smoothing_label)
 
             else:
@@ -48,7 +47,6 @@ def macer_train(method, sigma, lbd, gauss_num, beta, gamma, num_classes, model, 
                 classification_loss = F.nll_loss(outputs_logsoftmax, targets, reduction='sum')
 
             cl_total += classification_loss.item()
-            # print(classification_loss)
 
             # Robustness loss
             beta_outputs = outputs * beta  # only apply beta to the robustness loss
@@ -61,11 +59,14 @@ def macer_train(method, sigma, lbd, gauss_num, beta, gamma, num_classes, model, 
             top2_idx = top2[1]
             indices_correct = (top2_idx[:, 0] == targets)  # G_theta
 
+            #cut off large pA and pB to avoid nan
             out0_correct, out1_correct = top2_score[indices_correct, 0], top2_score[indices_correct, 1]
             out0_correct, out1_correct = torch.clamp(out0_correct, 0, 0.9999999), torch.clamp(out1_correct, 1e-7, 1)
 
+            #phi^{-1}(pA) - phi^{-1}(pB)
             robustness_loss_correct = m.icdf(out0_correct) - m.icdf(out1_correct)
 
+            #hinge factor, only calculate data with small robustness
             indice_1 = robustness_loss_correct <= gamma
             # indice_2 = ~(robustness_loss_correct <= gamma)
 
@@ -136,8 +137,8 @@ def label_smoothing(inputs, targets, noise, gauss_num, num_classes, device):
     tmp_label = tmp_label.view(gauss_num * tmp_label.size()[0], -1)
 
     #smoothed label is calculated by original hard label plus identical vector
-    tmp_label = ratio * tmp_label + (1 - ratio) * torch.ones_like(tmp_label)
+    tmp_label = ratio * tmp_label + (1 - ratio) * torch.ones_like(tmp_label) / num_classes
 
-    label = 10 * tmp_label.view(int(inputs.size()[0] / gauss_num), gauss_num, num_classes)
+    label = tmp_label.view(int(inputs.size()[0] / gauss_num), gauss_num, num_classes)
 
     return label
