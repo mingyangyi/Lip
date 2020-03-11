@@ -137,7 +137,8 @@ def label_smoothing(inputs, targets, noise, gauss_num, num_classes, device):
     tmp_label = tmp_label.view(gauss_num * tmp_label.size()[0], -1)
 
     #smoothed label is calculated by original hard label plus identical vector
-    tmp_label = ratio * tmp_label + (1 - ratio) * torch.ones_like(tmp_label) / num_classes
+    tmp_label = ratio * tmp_label + (1 - ratio) * torch.ones_like(tmp_label) / (5 * num_classes)
+    tmp_label = tmp_label / tmp_label.sum(1).unsqueeze(1)
 
     label = tmp_label.view(int(inputs.size()[0] / gauss_num), gauss_num, num_classes)
 

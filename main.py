@@ -80,7 +80,7 @@ def main():
 
     if device == 'cuda':
         model = model.to(device)
-        model = torch.nn.DataParallel(model)
+        # model = torch.nn.DataParallel(model)
         cudnn.benchmark = True
 
     # print("created model with configuration: %s", model_config)
