@@ -129,6 +129,7 @@ data/
 
 #results
 results/
+check_points/
 Cat_Dog_data
 adversarial sample/
 non-adversarial sample/

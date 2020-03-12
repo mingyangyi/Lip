@@ -40,12 +40,12 @@ def main():
 
     if device == 'cuda':
         model = model.to(device)
-        # model = torch.nn.DataParallel(model)
+        model = torch.nn.DataParallel(model)
         cudnn.benchmark = True
 
     # print("created model with configuration: %s", model_config)
     print("run arguments: %s", args)
-    with open(model_path + '/log.txt', 'a') as f:
+    with open(model_path + '/log_{}.txt'.format(args.check_point), 'a') as f:
         f.writelines(str(args) + '\n')
 
     num_parameters = sum([l.nelement() for l in model.parameters()])
@@ -90,7 +90,7 @@ def main():
             predict = soft_max.argmax(1)
 
             correct += predict.eq(targets).sum().item()
-            print('check')
+
         acc = correct / data_size
         with open(model_path + '/log.txt', 'a') as f:
             f.writelines('The accuracy on adversarial sample for epsilon {} is {}'.format(epsilon, acc))
