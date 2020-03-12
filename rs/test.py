@@ -35,9 +35,11 @@ class Test(object):
                 , [logit[index[1]] for logit, index in zip(logits_soft, predict_soft)]
 
             self.ssA, self.ssB = self.square_sum[predict_soft[0], predict_soft[1]]
+            # Calculating the lower bound for pA and the upper bound for pB
             pA_hard, pB_hard = self._lower_confidence_bound(scoreA_hard, scoreB_hard, n, alpha, 'hard')
             pA_soft, pB_soft = self._lower_confidence_bound(np.asarray(scoreA_soft), np.asarray(scoreB_soft), n, alpha, 'soft')
 
+            # The classification results is validate only if the lower bound of pA larger than the upper bound of pB
             output_hard = predict_hard[:, 0]
             output_hard[torch.tensor(pA_hard) < torch.tensor(pB_hard)] = Test.ABSTAIN
 
