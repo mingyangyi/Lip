@@ -58,10 +58,13 @@ def main():
     testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform_test)
     testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=1)
 
-    if os.path.exists(model_path + args.check_point):  # , 'Error: no results directory found!'
+    if os.path.exists(os.path.join(model_path, args.check_point)):  # , 'Error: no results directory found!'
         print('==> Resuming from checkpoint..')
-        checkpoint = torch.load(model_path + args.check_point)
-        model.load_state_dict(checkpoint['model'])
+        checkpoint = torch.load(os.path.join(model_path, args.check_point))
+        try:
+            model.load_state_dict(checkpoint['model'])
+        except:
+            model.load_state_dict(checkpoint['net'])
 
     for epsilon in np.arange(0.25, 2.0, 0.25):
         attacker = PGD_L2(steps=args.steps, device=device, max_norm=epsilon)
