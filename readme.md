@@ -22,5 +22,5 @@ python main.py --dataset cifar10 --lr 0.01 --batch_size 64 --training_method mac
 
 ### Train Imagenet
 ```
-python main.py --dataset imagenet --lr 0.1 --batch_size 256 --data_dir /blob_data/data/imagenet --training_method macer --epochs 120 --sigma 0.25 --lbd lam --gauss_num 2 --label_smoothing True
+python main.py --dataset imagenet --lr 0.1 --batch_size 256 --data_dir /blob_data/data/imagenet --training_method macer --epochs 120 --sigma 0.25 --lam 6 --gauss_num 2 --label_smoothing True
 ```
